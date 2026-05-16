@@ -1,0 +1,14 @@
+OSCAR Project KB Cross-Validation
+Generated: 2026-05-16T16:05:57.625207
+==================================================
+
+Project KB entries (total):     1248
+Entries processed:              1248
+Diffs fetched:                  1324
+Entries with functions:          954
+Extraction rate:                76.4%
+Total functions extracted:       8069
+Avg functions per entry:         8.5
+
+JS/Python extraction rate:       58.6% (95/162)
+Java extraction rate:            76.4% (954/1248)

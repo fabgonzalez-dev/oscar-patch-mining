@@ -1,0 +1,93 @@
+SCORED 2026 Evaluation Summary
+Generated: 2026-05-16T16:18:40.944044
+==================================================
+
+
+======================================================================
+SCORED 2026 — PATCH MINING EVALUATION
+Generated: 2026-05-16T16:18:40.942908
+======================================================================
+
+  ── JAVA (Project KB Ground Truth) ──
+  KB entries processed:           1248
+  Diffs successfully fetched:     1109
+  Entries with extracted functions:954
+  Extraction rate (overall):      76.4%
+  Extraction rate (on fetchable): 86.0%
+  Total functions extracted:      8069
+  Avg functions/entry (non-zero): 8.5
+  Median functions/entry:         4
+
+  Function count distribution:
+    0 functions:     294 (23.6%)
+    1-5 functions:   582 (46.6%)
+    6-20 functions:  286 (22.9%)
+    >20 functions:    86 (6.9%)
+
+  ── JS/PYTHON (GHSA Pipeline) ──
+  GHSA advisories processed:      45
+  With fix commits:               0
+  With extracted functions:        0
+
+  ── CROSS-ECOSYSTEM COMPARISON ──
+  Language         Processed  Extracted     Rate
+  ---------------------------------------------
+  Java (KB)             1109        954    86.0%
+  JS/Python              127         95    74.8%
+  Combined              1236       1049    84.9%
+
+  ── FAILURE MODE ANALYSIS ──
+  No diff fetchable (repo moved/deleted): 139 (11.1%)
+  Diff fetched, no functions extracted:    155 (12.4%)
+  Successfully extracted:                 954 (76.4%)
+
+  Possible reasons for 155 no-extraction cases:
+    - Config/XML-only changes (no Java source)
+    - POM dependency version bumps
+    - Binary/resource file changes
+    - Test-only changes (filtered by our pipeline)
+
+  ── PROJECT KB DATASET STATISTICS ──
+  Total KB entries:               1248
+  With GitHub-hosted repos:       1177 (94.3%)
+  With Maven package info:        568 (45.5%)
+  Our sample size:                1248 (100.0%)
+
+======================================================================
+LATEX TABLE SNIPPETS FOR SCORED PAPER
+======================================================================
+
+% Table: Cross-ecosystem extraction rates
+\begin{table}[t]
+    \centering
+    \caption{Extraction rates across ecosystems. \emph{Fetchable} = advisories where at least one commit diff was successfully retrieved.}
+    \label{tab:extraction-rates}
+    \begin{tabular}{l r r r}
+        \toprule
+        \textbf{Ecosystem} & \textbf{Advisories} & \textbf{Fetchable} & \textbf{Rate} \\
+        \midrule
+        Java (Maven)  & 1248 & 1109 & 86.0\% \\
+        JS (npm)      & 162 & 127 & 74.8\% \\
+        Python (PyPI) & \multicolumn{3}{c}{included in JS/Python} \\
+        \midrule
+        Combined      & 1410 & 1236 & 84.9\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% Table: Function extraction distribution
+\begin{table}[t]
+    \centering
+    \caption{Distribution of extracted function counts per advisory (Java/Maven, $n{=}1248$).}
+    \label{tab:func-distribution}
+    \begin{tabular}{l r r}
+        \toprule
+        \textbf{Functions} & \textbf{Count} & \textbf{\%} \\
+        \midrule
+        0          & 294 & 23.6 \\
+        1--5       & 582 & 46.6 \\
+        6--20      & 286 & 22.9 \\
+        $>$20      & 86 & 6.9 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
