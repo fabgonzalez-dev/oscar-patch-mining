@@ -1,0 +1,21 @@
+sample_id,vuln_id,repo,package,function_name,num_functions,confidence,verdict,reasoning
+1,CVE-2018-1000854,esigate/esigate,org.esigate/esigate-core,XsltRenderer,1,High,Central,XsltRenderer.java constructor patched to add secure XSLT factory settings. Fix target.
+2,CVE-2018-1190,cloudfoundry/uaa,org.cloudfoundry.identity/cloudfoundry-identity-server,escape,1,High,Central,escape() method added/used in SessionController to prevent XSS in OpenID Connect endpoint.
+3,CVE-2017-2670,undertow-io/undertow,io.undertow/undertow-core,run,1,High,Tangential,run() is a generic Runnable in WebSocket handling. Fix modifies behavior inside but name provides no vulnerability-specific information.
+4,CVE-2018-1000125,inversoft/prime-jwt,com.inversoft/prime-jwt,InvalidJWTSignatureException,2,High,Noise,Exception class name from import statement. Actual fix is in decode() method of JWTDecoder.java.
+5,CVE-2017-18349,alibaba/fastjson,com.alibaba/fastjson,deserialze,1,High,Central,deserialze() in ObjectArrayCodec.java directly patched to block autoType bypass. Note: intentional typo in fastjson API.
+6,CVE-2016-3084,cloudfoundry/uaa,org.cloudfoundry.identity/cloudfoundry-identity-server,forgotPassword,1,High,Noise,Function not found in any patched file. 0 src java files modified. Fix was in non-Java config/XML.
+7,CVE-2018-1114,undertow-io/undertow,io.undertow/undertow-core,openConnection,1,High,Central,openConnection() in URLResource.java patched to add proper resource closing to prevent FD leak.
+8,CVE-2018-8027,apache/camel,org.apache.camel/camel-core,IllegalStateException,2,High,Noise,Standard Java exception class name not in patch text. Actual fix was one-line change in SchemaReader.java.
+9,CVE-2019-13990,quartz-scheduler/quartz,org.quartz-scheduler/quartz,initDocumentParser,1,High,Central,initDocumentParser() patched to add XXE prevention config to XML parser.
+10,CVE-2019-3888,undertow-io/undertow,io.undertow/undertow-core,create,1,High,Noise,Generic factory method in hunk context header. Actual fix was in toString() for query string sanitization.
+11,CVE-2018-1000866,jenkinsci/groovy-sandbox,org.kohsuke/groovy-sandbox,SecurityException,3,Medium,Noise,"Exception class thrown in fix code, not a method definition. Actual fix function is forbidIfFinalizer()."
+12,CVE-2017-13309,google/conscrypt,org.conscrypt/conscrypt-openjdk,readEncryptedData,3,Medium,Central,readEncryptedData() in ConscryptEngine.java directly patched to fix SSLEngine buffer handling bug.
+13,CVE-2020-13934,apache/tomcat,org.apache.tomcat/tomcat-coyote,getProtocol,3,Medium,Tangential,getProtocol() called within fix but not patched itself. Actual fix in process()/release() for HTTP/2 recycling.
+14,CVE-2020-5397,spring-projects/spring-framework,org.springframework/spring-webmvc,getHandler,3,Medium,Central,getHandler() in AbstractHandlerMapping directly modified to add CORS origin validation.
+15,CVE-2020-5410,spring-cloud/spring-cloud-config,org.springframework.cloud/spring-cloud-config-server,checkResource,4,Medium,Central,checkResource() newly created in PathUtils.java as primary path traversal defense function.
+16,CVE-2019-3774,spring-projects/spring-batch,org.springframework.batch/spring-batch-infrastructure,build,8,Low,Tangential,"build() is a builder pattern method modified to use secure XmlInputFactory settings. Generic name, not security-specific."
+17,CVE-2008-6505,apache/struts,org.apache.struts/struts2-core,buildPath,10,Low,Tangential,buildPath() called on deleted line in directory traversal fix. Function related to vulnerability but fix removes it from call chain.
+18,CVE-2018-10899,rhuss/jolokia,org.jolokia/jolokia-core,check,9,Low,Central,check() in CorsChecker.java directly patched to harden CORS strict checking.
+19,CVE-2013-4310,apache/struts,org.apache.struts/struts2-core,DefaultActionMapper,6,Low,Central,DefaultActionMapper class modified to add namespace access control methods preventing cross-namespace action invocation.
+20,CVE-2019-3773,spring-projects/spring-ws,org.springframework.ws/spring-ws-core,DomPoxMessageFactory,26,Low,Central,DomPoxMessageFactory modified to replace direct DocumentBuilderFactory.newInstance() with secure XXE-resistant defaults.

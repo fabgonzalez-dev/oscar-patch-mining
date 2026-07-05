@@ -20,7 +20,10 @@ from pathlib import Path
 from collections import defaultdict
 
 # ── Configuration ──
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "oscar-research-data" / "data"
+# Primary: local consolidated data directory
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+# Fallback: cross-repo path (legacy)
+_LEGACY_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "oscar-research-data" / "data"
 OUT_DIR = Path(__file__).resolve().parent
 DEFAULT_N = 30
 DEFAULT_SEED = 42
@@ -55,10 +58,14 @@ def assign_confidence(num_functions, num_files, function_name):
 
 
 def load_extractions():
-    """Load JS/Python extractions from cve_patch_analysis.csv."""
-    csv_path = DATA_DIR / "cve_patch_analysis.csv"
+    """Load JS/Python extractions for precision validation sampling."""
+    # Primary: local Study 1 precision corpus (45 entries)
+    csv_path = DATA_DIR / "ghsa_study1_precision_corpus.csv"
     if not csv_path.exists():
-        print(f"ERROR: {csv_path} not found")
+        # Fallback: legacy cross-repo path
+        csv_path = _LEGACY_DATA_DIR / "cve_patch_analysis.csv"
+    if not csv_path.exists():
+        print(f"ERROR: No extraction data found")
         sys.exit(1)
     
     all_samples = []

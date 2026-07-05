@@ -76,16 +76,19 @@ def load_existing_kb_results():
 
 
 def load_js_python_results():
-    """Load the JS/Python extraction results from the main pipeline."""
-    # Look for the main cve_patch_analysis.csv
-    research_data = BASE_DIR / "oscar-research-data" / "data"
-    candidates = sorted(research_data.glob("cve_patch_analysis*.csv"), reverse=True)
-    
-    if not candidates:
-        return None
+    """Load the JS/Python extraction results from the local consolidated data."""
+    # Primary: local consolidated ICSE corpus (162 entries)
+    csv_path = DATA_DIR / "ghsa_js_python_extraction.csv"
+    if not csv_path.exists():
+        # Fallback: cross-repo path (legacy)
+        research_data = BASE_DIR / "oscar-research-data" / "data"
+        candidates = sorted(research_data.glob("cve_patch_analysis*.csv"), reverse=True)
+        if not candidates:
+            return None
+        csv_path = candidates[0]
     
     results = []
-    with open(candidates[0], 'r') as f:
+    with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             results.append(row)
@@ -229,14 +232,31 @@ def compute_scored_metrics(kb_results, js_python_results, kb_entries):
             print(f"  Extraction rate (on fetchable): {js_with_funcs/js_with_commits*100:.1f}%")
     
     # ── 3. Cross-Ecosystem Comparison ──
+    # Compute JS/Python stats from loaded data (no more hardcoded values)
+    js_py_total = 0
+    js_py_with_commits = 0
+    js_py_with_funcs = 0
+    if js_python_results:
+        js_py_total = len(js_python_results)
+        for r in js_python_results:
+            if int(r.get('fix_commits_found', r.get('num_functions_mined', 0))) > 0 or r.get('functions_mined', ''):
+                js_py_with_commits += 1
+            if int(r.get('num_functions_mined', 0)) > 0:
+                js_py_with_funcs += 1
+    
+    # Recount with_commits more carefully: any row with fix_commits_found > 0
+    js_py_with_commits = sum(1 for r in (js_python_results or []) if int(r.get('fix_commits_found', 0)) > 0)
+    js_py_rate = js_py_with_funcs / js_py_with_commits * 100 if js_py_with_commits else 0
+    
     print(f"\n  ── CROSS-ECOSYSTEM COMPARISON ──")
     print(f"  {'Language':<15s} {'Processed':>10s} {'Extracted':>10s} {'Rate':>8s}")
     print(f"  {'-'*45}")
     print(f"  {'Java (KB)':<15s} {n_with_diffs:>10d} {n_with_funcs:>10d} {rate_on_fetchable:>7.1f}%")
-    
-    # Use hardcoded GHSA numbers from earlier analysis
-    print(f"  {'JS/Python':<15s} {'127':>10s} {'95':>10s} {'74.8':>7s}%")
-    print(f"  {'Combined':<15s} {n_with_diffs+127:>10d} {n_with_funcs+95:>10d} {(n_with_funcs+95)/(n_with_diffs+127)*100:>7.1f}%")
+    print(f"  {'JS/Python':<15s} {js_py_with_commits:>10d} {js_py_with_funcs:>10d} {js_py_rate:>7.1f}%")
+    combined_proc = n_with_diffs + js_py_with_commits
+    combined_extr = n_with_funcs + js_py_with_funcs
+    combined_rate = combined_extr / combined_proc * 100 if combined_proc else 0
+    print(f"  {'Combined':<15s} {combined_proc:>10d} {combined_extr:>10d} {combined_rate:>7.1f}%")
     
     # ── 4. Failure Mode Analysis ──
     print(f"\n  ── FAILURE MODE ANALYSIS ──")
@@ -275,6 +295,9 @@ def compute_scored_metrics(kb_results, js_python_results, kb_entries):
         'java_total_funcs': total_funcs,
         'java_rate_fetchable': rate_on_fetchable,
         'java_rate_overall': rate_overall,
+        'js_py_total': js_py_total,
+        'js_py_with_commits': js_py_with_commits,
+        'js_py_with_funcs': js_py_with_funcs,
     }
 
 
@@ -289,7 +312,12 @@ def generate_latex_tables(metrics, kb_results):
     print("LATEX TABLE SNIPPETS FOR SCORED PAPER")
     print(f"{'='*70}")
     
-    # Table 1: Cross-ecosystem extraction rates
+    # Table 1: Cross-ecosystem extraction rates (computed from data)
+    js_py_total = metrics.get('js_py_total', 0)
+    js_py_commits = metrics.get('js_py_with_commits', 0)
+    js_py_funcs = metrics.get('js_py_with_funcs', 0)
+    js_py_rate = js_py_funcs / js_py_commits * 100 if js_py_commits else 0
+    
     print("""
 % Table: Cross-ecosystem extraction rates
 \\begin{table}[t]
@@ -304,10 +332,13 @@ def generate_latex_tables(metrics, kb_results):
     n_diffs = metrics['java_diffs_fetched']
     n_funcs = metrics['java_with_funcs']
     print(f"        Java (Maven)  & {metrics['java_processed']} & {n_diffs} & {metrics['java_rate_fetchable']:.1f}\\% \\\\")
-    print(f"        JS (npm)      & 162 & 127 & 74.8\\% \\\\")
-    print(f"        Python (PyPI) & \\multicolumn{{3}}{{c}}{{included in JS/Python}} \\\\")
+    print(f"        JS + Python (npm + PyPI) & {js_py_total} & {js_py_commits} & {js_py_rate:.1f}\\% \\\\")
     print(f"        \\midrule")
-    print(f"        Combined      & {metrics['java_processed']+162} & {n_diffs+127} & {(n_funcs+95)/(n_diffs+127)*100:.1f}\\% \\\\")
+    combined_total = metrics['java_processed'] + js_py_total
+    combined_fetch = n_diffs + js_py_commits
+    combined_extr = n_funcs + js_py_funcs
+    combined_rate = combined_extr / combined_fetch * 100 if combined_fetch else 0
+    print(f"        Combined      & {combined_total} & {combined_fetch} & {combined_rate:.1f}\\% \\\\")
     print("""        \\bottomrule
     \\end{tabular}
 \\end{table}""")
