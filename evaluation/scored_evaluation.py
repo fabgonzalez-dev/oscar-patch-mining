@@ -217,12 +217,12 @@ def compute_scored_metrics(kb_results, js_python_results, kb_entries):
     # ── 2. JS/Python (GHSA) Metrics ──
     if js_python_results:
         js_total = len(js_python_results)
-        # Find which have functions extracted
-        with_commits_col = 'fix_commit_url' if 'fix_commit_url' in js_python_results[0] else 'commit_url'
-        funcs_col = 'mined_functions' if 'mined_functions' in js_python_results[0] else 'functions_extracted'
-        
-        js_with_commits = sum(1 for r in js_python_results if r.get(with_commits_col, ''))
-        js_with_funcs = sum(1 for r in js_python_results if r.get(funcs_col, ''))
+        # Count advisories with fix commits and with extracted functions
+        # mine_cve_patches.py outputs: fix_commits_found (int), functions_mined (semicolon-delimited)
+        js_with_commits = sum(1 for r in js_python_results
+                              if int(r.get('fix_commits_found', 0)) > 0)
+        js_with_funcs = sum(1 for r in js_python_results
+                            if r.get('functions_mined', '').strip())
         
         print(f"\n  ── JS/PYTHON (GHSA Pipeline) ──")
         print(f"  GHSA advisories processed:      {js_total}")
