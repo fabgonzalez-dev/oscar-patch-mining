@@ -1,0 +1,8 @@
+Ecosystem: pypi
+Updated: 2026-07-08T00:49:35.736723
+Pages fetched: 57
+Total advisories: 5640
+With fix commits: 3682
+With functions: 3055
+Total functions: 32197
+Extraction rate: 83.0%

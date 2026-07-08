@@ -28,6 +28,7 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
@@ -53,10 +54,10 @@ GITHUB_DELAY = 0.8 if GITHUB_TOKEN else 2.0
 # GitHub Advisory Database API
 # ============================================================================
 
-def fetch_ghsa_page(ecosystem, page=1):
+def fetch_ghsa_page(ecosystem, cursor=None):
     """Fetch one page of GHSA advisories for a given ecosystem.
     
-    Uses the GitHub REST API: GET /advisories
+    Uses the GitHub REST API: GET /advisories (cursor-based pagination)
     Docs: https://docs.github.com/en/rest/security-advisories/global-advisories
     """
     url = "https://api.github.com/advisories"
@@ -64,8 +65,9 @@ def fetch_ghsa_page(ecosystem, page=1):
         f"ecosystem={ecosystem}",
         "type=reviewed",        # only reviewed advisories
         "per_page=100",         # max page size
-        f"page={page}",
     ]
+    if cursor:
+        params.append(f"after={cursor}")
     
     full_url = f"{url}?{'&'.join(params)}"
     headers = {
@@ -81,42 +83,47 @@ def fetch_ghsa_page(ecosystem, page=1):
             req = urllib.request.Request(full_url, headers=headers)
             with urllib.request.urlopen(req, timeout=30, context=_SSL_CTX) as resp:
                 data = json.loads(resp.read().decode())
-                # Check if there's a next page via Link header
+                # Extract next cursor from Link header
                 link_header = resp.getheader("Link", "")
-                has_next = 'rel="next"' in link_header
+                next_cursor = None
+                if 'rel="next"' in link_header:
+                    m = re.search(r'after=([^&>]+)', link_header)
+                    if m:
+                        next_cursor = urllib.parse.unquote(m.group(1))
                 remaining = resp.getheader("X-RateLimit-Remaining", "?")
-                return data, has_next, remaining
+                return data, next_cursor, remaining
         except urllib.error.HTTPError as e:
             if e.code == 403:
-                # Rate limited
                 retry_after = int(e.headers.get("Retry-After", 60))
                 print(f"  ⚠ Rate limited. Waiting {retry_after}s...")
                 time.sleep(retry_after)
                 continue
             if e.code == 422:
-                print(f"  ⚠ Invalid page, stopping...")
-                return [], False, "0"
+                print(f"  ⚠ Invalid cursor, stopping...")
+                return [], None, "0"
             print(f"  ⚠ HTTP {e.code}: {e.read().decode()[:200]}")
-            return [], False, "0"
+            return [], None, "0"
         except Exception as e:
             if attempt < 2:
                 time.sleep(2)
                 continue
             print(f"  ⚠ Error: {e}")
-            return [], False, "0"
-    return [], False, "0"
+            return [], None, "0"
+    return [], None, "0"
 
 
 def fetch_all_advisories(ecosystem):
-    """Fetch ALL reviewed advisories for a given ecosystem using pagination."""
+    """Fetch ALL reviewed advisories for a given ecosystem using cursor pagination."""
     all_advisories = []
-    page = 1
+    cursor = None
+    page = 0
     
     while True:
+        page += 1
         print(f"  Fetching page {page}...")
         time.sleep(GITHUB_DELAY)
         
-        advisories, has_next, remaining = fetch_ghsa_page(ecosystem, page)
+        advisories, next_cursor, remaining = fetch_ghsa_page(ecosystem, cursor)
         
         if not advisories:
             break
@@ -124,9 +131,9 @@ def fetch_all_advisories(ecosystem):
         all_advisories.extend(advisories)
         print(f"    → Got {len(advisories)} advisories (total: {len(all_advisories)}, rate limit: {remaining})")
         
-        if not has_next:
+        if not next_cursor:
             break
-        page += 1
+        cursor = next_cursor
     
     return all_advisories
 
@@ -159,103 +166,115 @@ def extract_fix_commits(advisory):
 # ============================================================================
 
 def process_ecosystem(ecosystem, ghsa_ecosystem_name):
-    """Fetch all advisories for an ecosystem and run extraction."""
+    """Fetch advisories page-by-page and process each immediately (streaming)."""
     print(f"\n{'='*70}")
     print(f"PROCESSING: {ecosystem.upper()} ({ghsa_ecosystem_name})")
-    print(f"{'='*70}\n")
+    print(f"{'='*70}\n", flush=True)
     
-    # Map GHSA ecosystem names to our pipeline ecosystem names
     eco_map = {"npm": "npm", "pip": "pypi"}
     pipeline_eco = eco_map.get(ghsa_ecosystem_name, ghsa_ecosystem_name)
     
-    # Step 1: Fetch all advisories
-    print("Step 1: Fetching all reviewed advisories from GHSA...")
-    advisories = fetch_all_advisories(ghsa_ecosystem_name)
-    print(f"  → Total advisories: {len(advisories)}")
+    # Output CSV path — open for incremental writes
+    csv_path = DATA_DIR / f"ghsa_full_{ecosystem}_extraction.csv"
+    progress_path = DATA_DIR / f"ghsa_full_{ecosystem}_progress.txt"
+    fieldnames = ["vuln_id", "affected_package", "ecosystem", "severity",
+                  "fix_commits_found", "functions_mined", "num_functions_mined",
+                  "functions_capped", "source_repo"]
     
-    if not advisories:
-        print("  ⚠ No advisories found!")
-        return []
+    stats = {"total": 0, "with_commits": 0, "with_functions": 0,
+             "total_functions": 0, "capped": 0}
     
-    # Step 2: Process each advisory
-    print(f"\nStep 2: Extracting functions from fix commits...")
-    results = []
-    stats = {
-        "total": len(advisories),
-        "with_commits": 0,
-        "with_functions": 0,
-        "total_functions": 0,
-        "capped": 0,
-    }
+    MAX_FUNCTIONS = 15
+    cursor = None
+    page = 0
     
-    for i, adv in enumerate(advisories, 1):
-        ghsa_id = adv.get("ghsa_id", "")
-        severity = adv.get("severity", "unknown")
+    with open(csv_path, "w", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
         
-        # Get affected package name
-        pkg_name = ""
-        for vuln in adv.get("vulnerabilities", []):
-            pkg = vuln.get("package", {})
-            if pkg.get("ecosystem", "").lower() == ghsa_ecosystem_name.lower():
-                pkg_name = pkg.get("name", "")
-                break
-        
-        if not pkg_name and adv.get("vulnerabilities"):
-            pkg = adv["vulnerabilities"][0].get("package", {})
-            pkg_name = pkg.get("name", "")
-        
-        if i % 50 == 0 or i <= 5:
-            print(f"  [{i}/{len(advisories)}] {ghsa_id} ({pkg_name})")
-        
-        # Extract fix commits
-        commits, source_repo = extract_fix_commits(adv)
-        
-        if not commits:
-            results.append({
-                "vuln_id": ghsa_id,
-                "affected_package": pkg_name,
-                "ecosystem": pipeline_eco,
-                "severity": severity,
-                "fix_commits_found": 0,
-                "functions_mined": "",
-                "num_functions_mined": 0,
-                "functions_capped": False,
-                "source_repo": "",
-            })
-            continue
-        
-        stats["with_commits"] += 1
-        
-        # Fetch diffs and extract functions
-        all_functions = set()
-        for commit_url in commits[:3]:  # cap at 3 commits per advisory
+        while True:
+            page += 1
             time.sleep(GITHUB_DELAY)
-            diff = get_commit_diff(commit_url)
-            if diff:
-                funcs = extract_functions_from_diff(diff, pipeline_eco)
-                all_functions.update(funcs)
-        
-        # Function count cap
-        MAX_FUNCTIONS = 15
-        functions_capped = len(all_functions) > MAX_FUNCTIONS
-        if functions_capped:
-            stats["capped"] += 1
-        
-        if all_functions:
-            stats["with_functions"] += 1
-            stats["total_functions"] += len(all_functions)
-        
-        results.append({
-            "vuln_id": ghsa_id,
-            "affected_package": pkg_name,
-            "ecosystem": pipeline_eco,
-            "severity": severity,
-            "fix_commits_found": len(commits),
-            "functions_mined": ";".join(sorted(all_functions)),
-            "num_functions_mined": len(all_functions),
-            "functions_capped": functions_capped,
-            "source_repo": source_repo or "",
-        })
+            advisories, next_cursor, remaining = fetch_ghsa_page(ghsa_ecosystem_name, cursor)
+            
+            if not advisories:
+                break
+            
+            print(f"  Page {page}: {len(advisories)} advisories (rate limit: {remaining})", flush=True)
+            
+            # Process each advisory on this page immediately
+            for adv in advisories:
+                stats["total"] += 1
+                ghsa_id = adv.get("ghsa_id", "")
+                severity = adv.get("severity", "unknown")
+                
+                # Get package name
+                pkg_name = ""
+                for vuln in adv.get("vulnerabilities", []):
+                    pkg = vuln.get("package", {})
+                    if pkg.get("ecosystem", "").lower() == ghsa_ecosystem_name.lower():
+                        pkg_name = pkg.get("name", "")
+                        break
+                if not pkg_name and adv.get("vulnerabilities"):
+                    pkg_name = adv["vulnerabilities"][0].get("package", {}).get("name", "")
+                
+                # Extract fix commits from advisory references
+                commits, source_repo = extract_fix_commits(adv)
+                
+                if not commits:
+                    writer.writerow({
+                        "vuln_id": ghsa_id, "affected_package": pkg_name,
+                        "ecosystem": pipeline_eco, "severity": severity,
+                        "fix_commits_found": 0, "functions_mined": "",
+                        "num_functions_mined": 0, "functions_capped": False,
+                        "source_repo": "",
+                    })
+                    continue
+                
+                stats["with_commits"] += 1
+                
+                # Fetch diffs and extract functions
+                all_functions = set()
+                for commit_url in commits[:3]:
+                    time.sleep(GITHUB_DELAY)
+                    diff = get_commit_diff(commit_url)
+                    if diff:
+                        funcs = extract_functions_from_diff(diff, pipeline_eco)
+                        all_functions.update(funcs)
+                
+                functions_capped = len(all_functions) > MAX_FUNCTIONS
+                if functions_capped:
+                    stats["capped"] += 1
+                if all_functions:
+                    stats["with_functions"] += 1
+                    stats["total_functions"] += len(all_functions)
+                
+                writer.writerow({
+                    "vuln_id": ghsa_id, "affected_package": pkg_name,
+                    "ecosystem": pipeline_eco, "severity": severity,
+                    "fix_commits_found": len(commits),
+                    "functions_mined": ";".join(sorted(all_functions)),
+                    "num_functions_mined": len(all_functions),
+                    "functions_capped": functions_capped,
+                    "source_repo": source_repo or "",
+                })
+            
+            # Flush CSV and write progress every page
+            csvfile.flush()
+            with open(progress_path, "w") as pf:
+                pf.write(f"Ecosystem: {ecosystem}\n")
+                pf.write(f"Updated: {datetime.now().isoformat()}\n")
+                pf.write(f"Pages fetched: {page}\n")
+                pf.write(f"Total advisories: {stats['total']}\n")
+                pf.write(f"With fix commits: {stats['with_commits']}\n")
+                pf.write(f"With functions: {stats['with_functions']}\n")
+                pf.write(f"Total functions: {stats['total_functions']}\n")
+                rate = stats['with_functions'] / stats['with_commits'] * 100 if stats['with_commits'] else 0
+                pf.write(f"Extraction rate: {rate:.1f}%\n")
+            
+            if not next_cursor:
+                break
+            cursor = next_cursor
     
     # Print summary
     print(f"\n  ── {ecosystem.upper()} SUMMARY ──")
@@ -268,7 +287,7 @@ def process_ecosystem(ecosystem, ghsa_ecosystem_name):
         rate = stats["with_functions"] / stats["with_commits"] * 100
         print(f"  Extraction rate:      {rate:.1f}%")
     
-    return results
+    return stats
 
 
 # ============================================================================
@@ -277,10 +296,10 @@ def process_ecosystem(ecosystem, ghsa_ecosystem_name):
 
 def main():
     print("=" * 70)
-    print("SCORED 2026 — FULL GHSA CORPUS EXTRACTION")
+    print("SCORED 2026 — FULL GHSA CORPUS EXTRACTION (streaming)")
     print(f"Timestamp: {datetime.now().isoformat()}")
     print(f"GitHub Token: {'configured' if GITHUB_TOKEN else 'NOT SET (will be slow!)'}")
-    print("=" * 70)
+    print("=" * 70, flush=True)
     
     if not GITHUB_TOKEN:
         print("\n⚠  WARNING: No GITHUB_TOKEN set. Rate limit is 60 req/hr.")
@@ -288,40 +307,21 @@ def main():
         print("   export GITHUB_TOKEN='ghp_...'")
         print("   Continuing with unauthenticated access...\n")
     
-    # Process npm
-    npm_results = process_ecosystem("npm", "npm")
+    # Process npm (CSV written incrementally)
+    npm_stats = process_ecosystem("npm", "npm")
     
-    # Save npm results
-    if npm_results:
-        npm_path = DATA_DIR / "ghsa_full_npm_extraction.csv"
-        with open(npm_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=npm_results[0].keys())
-            writer.writeheader()
-            writer.writerows(npm_results)
-        print(f"\n  → Saved: {npm_path} ({len(npm_results)} rows)")
-    
-    # Process PyPI
-    pypi_results = process_ecosystem("pypi", "pip")
-    
-    # Save PyPI results
-    if pypi_results:
-        pypi_path = DATA_DIR / "ghsa_full_pypi_extraction.csv"
-        with open(pypi_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=pypi_results[0].keys())
-            writer.writeheader()
-            writer.writerows(pypi_results)
-        print(f"\n  → Saved: {pypi_path} ({len(pypi_results)} rows)")
+    # Process PyPI (CSV written incrementally)
+    pypi_stats = process_ecosystem("pypi", "pip")
     
     # Combined summary
     print(f"\n{'='*70}")
     print("COMBINED SUMMARY")
     print(f"{'='*70}")
     
-    all_results = npm_results + pypi_results
-    total = len(all_results)
-    with_commits = sum(1 for r in all_results if r["fix_commits_found"] > 0)
-    with_funcs = sum(1 for r in all_results if r["num_functions_mined"] > 0)
-    total_funcs = sum(r["num_functions_mined"] for r in all_results)
+    total = npm_stats["total"] + pypi_stats["total"]
+    with_commits = npm_stats["with_commits"] + pypi_stats["with_commits"]
+    with_funcs = npm_stats["with_functions"] + pypi_stats["with_functions"]
+    total_funcs = npm_stats["total_functions"] + pypi_stats["total_functions"]
     
     print(f"  Total advisories:     {total}")
     print(f"  With fix commits:     {with_commits}")
@@ -337,18 +337,14 @@ def main():
         f.write(f"Generated: {datetime.now().isoformat()}\n")
         f.write(f"{'='*50}\n\n")
         
-        for label, results in [("npm", npm_results), ("PyPI", pypi_results)]:
-            n = len(results)
-            wc = sum(1 for r in results if r["fix_commits_found"] > 0)
-            wf = sum(1 for r in results if r["num_functions_mined"] > 0)
-            tf = sum(r["num_functions_mined"] for r in results)
+        for label, s in [("npm", npm_stats), ("PyPI", pypi_stats)]:
             f.write(f"{label}:\n")
-            f.write(f"  Total advisories:     {n}\n")
-            f.write(f"  With fix commits:     {wc}\n")
-            f.write(f"  With functions:       {wf}\n")
-            f.write(f"  Total functions:      {tf}\n")
-            if wc:
-                f.write(f"  Extraction rate:      {wf/wc*100:.1f}%\n")
+            f.write(f"  Total advisories:     {s['total']}\n")
+            f.write(f"  With fix commits:     {s['with_commits']}\n")
+            f.write(f"  With functions:       {s['with_functions']}\n")
+            f.write(f"  Total functions:      {s['total_functions']}\n")
+            if s['with_commits']:
+                f.write(f"  Extraction rate:      {s['with_functions']/s['with_commits']*100:.1f}%\n")
             f.write(f"\n")
         
         f.write(f"Combined:\n")
@@ -360,6 +356,8 @@ def main():
             f.write(f"  Extraction rate:      {with_funcs/with_commits*100:.1f}%\n")
     
     print(f"\n  → Saved: {summary_path}")
+    print(f"  → npm CSV: {DATA_DIR / 'ghsa_full_npm_extraction.csv'}")
+    print(f"  → PyPI CSV: {DATA_DIR / 'ghsa_full_pypi_extraction.csv'}")
     print(f"\n{'='*70}")
     print("FULL CORPUS EXTRACTION COMPLETE")
     print(f"{'='*70}")

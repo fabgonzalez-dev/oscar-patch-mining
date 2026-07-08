@@ -1,0 +1,8 @@
+Ecosystem: npm
+Updated: 2026-07-07T22:53:40.220792
+Pages fetched: 68
+Total advisories: 6780
+With fix commits: 3667
+With functions: 1829
+Total functions: 8769
+Extraction rate: 49.9%

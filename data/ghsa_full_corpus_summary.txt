@@ -1,0 +1,24 @@
+SCORED 2026 — Full GHSA Corpus Summary
+Generated: 2026-07-08T00:49:35.738995
+==================================================
+
+npm:
+  Total advisories:     6780
+  With fix commits:     3667
+  With functions:       1829
+  Total functions:      8769
+  Extraction rate:      49.9%
+
+PyPI:
+  Total advisories:     5640
+  With fix commits:     3682
+  With functions:       3055
+  Total functions:      32197
+  Extraction rate:      83.0%
+
+Combined:
+  Total advisories:     12420
+  With fix commits:     7349
+  With functions:       4884
+  Total functions:      40966
+  Extraction rate:      66.5%
