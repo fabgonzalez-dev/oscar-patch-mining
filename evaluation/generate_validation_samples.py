@@ -59,48 +59,59 @@ def assign_confidence(num_functions, num_files, function_name):
 
 def load_extractions():
     """Load JS/Python extractions for precision validation sampling."""
-    # Primary: local Study 1 precision corpus (45 entries)
-    csv_path = DATA_DIR / "ghsa_study1_precision_corpus.csv"
-    if not csv_path.exists():
-        # Fallback: legacy cross-repo path
-        csv_path = _LEGACY_DATA_DIR / "cve_patch_analysis.csv"
-    if not csv_path.exists():
-        print(f"ERROR: No extraction data found")
-        sys.exit(1)
+    
+    csv_paths = [
+        DATA_DIR / "ghsa_full_npm_extraction.csv",
+        DATA_DIR / "ghsa_full_pypi_extraction.csv"
+    ]
+    
+    # Load previously sampled to exclude them
+    old_samples_path = OUT_DIR / "precision_validation_samples.csv"
+    excluded_vuln_ids = set()
+    if old_samples_path.exists():
+        with open(old_samples_path, 'r') as f:
+            for row in csv.DictReader(f):
+                excluded_vuln_ids.add(row['vuln_id'])
     
     all_samples = []
     
-    with open(csv_path, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            functions_str = row.get('functions_mined', '')
-            if not functions_str:
-                continue
-            
-            functions = [fn.strip() for fn in functions_str.split(';') if fn.strip()]
-            if not functions:
-                continue
-            
-            vuln_id = row['vuln_id']
-            package = row['affected_package']
-            ecosystem = row['ecosystem']
-            severity = row.get('severity', '')
-            source_repo = row.get('source_repo', '')
-            num_functions = len(functions)
-            
-            for func in functions:
-                confidence = assign_confidence(num_functions, 1, func)
-                all_samples.append({
-                    'vuln_id': vuln_id,
-                    'package': package,
-                    'ecosystem': ecosystem,
-                    'severity': severity,
-                    'function_name': func,
-                    'num_functions_in_advisory': num_functions,
-                    'confidence': confidence,
-                    'source_repo': source_repo,
-                    'ghsa_url': f'https://github.com/advisories/{vuln_id}',
-                })
+    for csv_path in csv_paths:
+        if not csv_path.exists():
+            continue
+        with open(csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                functions_str = row.get('functions_mined', '')
+                if not functions_str:
+                    continue
+                
+                functions = [fn.strip() for fn in functions_str.split(';') if fn.strip()]
+                if not functions:
+                    continue
+                
+                vuln_id = row['vuln_id']
+                if vuln_id in excluded_vuln_ids:
+                    continue
+                    
+                package = row['affected_package']
+                ecosystem = row['ecosystem']
+                severity = row.get('severity', '')
+                source_repo = row.get('source_repo', '')
+                num_functions = len(functions)
+                
+                for func in functions:
+                    confidence = assign_confidence(num_functions, 1, func)
+                    all_samples.append({
+                        'vuln_id': vuln_id,
+                        'package': package,
+                        'ecosystem': ecosystem,
+                        'severity': severity,
+                        'function_name': func,
+                        'num_functions_in_advisory': num_functions,
+                        'confidence': confidence,
+                        'source_repo': source_repo,
+                        'ghsa_url': f'https://github.com/advisories/{vuln_id}',
+                    })
     
     return all_samples
 
@@ -170,7 +181,7 @@ def main():
     print(f"\n  Selected {len(selected)} samples (seed={args.seed})")
     
     # Write CSV
-    out_path = OUT_DIR / "precision_validation_samples.csv"
+    out_path = OUT_DIR / "precision_validation_samples_extra.csv"
     fieldnames = [
         'sample_id', 'vuln_id', 'package', 'ecosystem', 'severity',
         'function_name', 'num_functions_in_advisory', 'confidence',
