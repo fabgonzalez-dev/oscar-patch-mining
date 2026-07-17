@@ -18,10 +18,22 @@ cd oscar-patch-mining/evaluation
 python3 merge_precision_samples.py            # -> precision_validation_samples_n104.csv
 
 # 2. (optional) regenerate the Project KB temporal analysis from real commit dates
-GITHUB_TOKEN=<token> python3 regenerate_temporal.py --source api   # -> commit_dates_cache.csv, temporal_regenerated.md
+GITHUB_TOKEN=<token> python3 regenerate_temporal.py --source api   # -> commit_dates_cache.csv
 
-# 3. Run the consistency guard (re-derives every headline number, checks main.tex)
-python3 check_consistency.py                  # exit 0 = paper matches data
+# 3. Apply noise filters to the corpus
+python3 apply_filters_corpus.py                # prints corpus-level filter stats
+
+# 4. Compute recall estimates
+python3 compute_recall_extended.py             # -> recall_study_results.json
+
+# 5. Run held-out filter validation on Java
+python3 filter_held_out.py                     # -> filter_held_out_results.json
+
+# 6. Run the consistency guard (re-derives every headline number, checks main.tex)
+python3 check_consistency.py                   # exit 0 = paper matches data
+
+# (tree-sitter PoC requires tree-sitter installed; results cached in treesitter_poc/results.json)
+# python3 treesitter_poc.py                    # -> treesitter_poc/results.json
 ```
 
 `scored_evaluation.py` regenerates `data/project_kb_java_extraction.csv` and the
@@ -65,10 +77,27 @@ Study-2 summary; `generate_validation_samples.py` holds the confidence-tier logi
 
 | Artifact | Value(s) | Data source | Producer |
 |---|---|---|---|
-| Table 4 | 139 no-diff + 155 fetched-no-extract = 294 | `data/project_kb_java_extraction.csv` | `scored_evaluation_summary.txt` |
+| Table 4 | 139 no-diff + 155 fetched-no-extract = 294 | `data/project_kb_java_extraction.csv` | `scored_evaluation.py` |
 | "14.0% failed after fetch" | 155 / 1,109 | same | — |
 
-### Reachability (§4.5) + qs walkthrough (§3.5)
+### Noise Filters (§5.4)
+
+| Artifact | Value(s) | Data source | Producer |
+|---|---|---|---|
+| Table 7 (filter-precision) | Strict 55.8% → 72.5%; Relaxed 75.0% → 95.0% | `evaluation/precision_validation_samples_n104.csv` | `evaluation/noise_filter.py` |
+| Corpus-level reduction | npm 3,276/8,769 (37.4%); PyPI 22,153/32,197 (68.8%) | `data/ghsa_full_{npm,pypi}_extraction.csv` | `evaluation/apply_filters_corpus.py` |
+| Held-out Java validation | 55.0% → 52.6% (n=19) | `evaluation/java_precision_validation.csv` | `evaluation/filter_held_out.py` → `filter_held_out_results.json` |
+| Tree-sitter PoC | 4 noise corrected, 8/14 controls agreed, 6 improved | `evaluation/treesitter_poc/results.json` | `evaluation/treesitter_poc.py` (cache in `treesitter_poc/cache/`, gitignored) |
+
+### Recall Estimation (§5.6)
+
+| Artifact | Value(s) | Data source | Producer |
+|---|---|---|---|
+| At-least-one recall | 25/44 = 56.8% | `evaluation/recall_study_samples_extended.csv` | `evaluation/compute_recall_extended.py` → `recall_study_results.json` |
+| Aggregate recall | 32/114 = 28.1% | same | same |
+| 12 advisories with 100% recall | single-function fixes | same | same |
+
+### Reachability (§5.5) + qs walkthrough (§3.6)
 
 | Artifact | Value(s) | Data source | Producer |
 |---|---|---|---|
@@ -80,7 +109,7 @@ Study-2 summary; `generate_validation_samples.py` holds the confidence-tier logi
 
 | Artifact | Value(s) | Data source |
 |---|---|---|
-| 13,668-advisory corpus | 6,780 + 5,640 + 1,248 | the three extraction CSVs |
+| 13,668-advisory corpus / 49,035 functions | 6,780 + 5,640 + 1,248 advisories; 8,069 + 8,769 + 32,197 functions | the three extraction CSVs |
 | Link rates 54% npm / 65% PyPI | | `data/ghsa_full_{npm,pypi}_extraction.csv` |
 | LLM cost \$137–410 | 13,668 × \$0.01–0.03/diff (footnoted assumption) | arithmetic |
 
