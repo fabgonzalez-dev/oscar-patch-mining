@@ -100,7 +100,7 @@ CONTROL_CASES = [
 # ── HTTP Helpers ──────────────────────────────────────────────────────
 
 def _headers():
-    h = {"User-Agent": "OSCAR-Research/1.0"}
+    h = {"User-Agent": "PatchMining-Research/1.0"}
     if GITHUB_TOKEN:
         h["Authorization"] = f"token {GITHUB_TOKEN}"
     return h

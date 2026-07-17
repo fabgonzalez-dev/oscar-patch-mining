@@ -43,7 +43,7 @@ except Exception:
     _CERTIFI = False
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parent.parent                       # .../OSCAR
+REPO_ROOT = HERE.parent.parent                       # repo root
 STMT_DIR = REPO_ROOT / "oscar-research-data/external/project-kb/statements"
 KB_CSV = HERE.parent / "data/project_kb_java_extraction.csv"
 CACHE = HERE / "commit_dates_cache.csv"
@@ -82,7 +82,7 @@ def fetch_commit_year_api(url, sha, token):
     if not orp:
         return None, None  # non-github host -> caller falls back
     api = f"https://api.github.com/repos/{orp[0]}/{orp[1]}/commits/{sha}"
-    req = urllib.request.Request(api, headers={"User-Agent": "oscar-temporal"})
+    req = urllib.request.Request(api, headers={"User-Agent": "patchmining-temporal"})
     if token:
         req.add_header("Authorization", f"Bearer {token}")
     try:

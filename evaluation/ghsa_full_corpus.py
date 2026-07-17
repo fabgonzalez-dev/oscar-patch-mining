@@ -72,7 +72,7 @@ def fetch_ghsa_page(ecosystem, cursor=None):
     full_url = f"{url}?{'&'.join(params)}"
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "OSCAR-Research/1.0",
+        "User-Agent": "PatchMining-Research/1.0",
         "X-GitHub-Api-Version": "2022-11-28",
     }
     if GITHUB_TOKEN:

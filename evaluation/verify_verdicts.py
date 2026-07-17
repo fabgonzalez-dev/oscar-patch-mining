@@ -99,7 +99,7 @@ def check_internal_consistency(rows):
 GITHUB_API = "https://api.github.com"
 HEADERS = {
     "Accept": "application/vnd.github+json",
-    "User-Agent": "OSCAR-Validation-Script/1.0"
+    "User-Agent": "PatchMining-Validation/1.0"
 }
 
 

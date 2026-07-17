@@ -2,7 +2,7 @@
 """
 SCORED 2026 — Java Patch Mining Evaluation
 ============================================
-Computes recall/precision/F1 metrics for the OSCAR patch mining pipeline
+Computes recall/precision/F1 metrics for the patch mining pipeline
 against the SAP Project KB gold-standard dataset.
 
 Evaluation approach:
