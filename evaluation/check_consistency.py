@@ -158,6 +158,73 @@ jvc = Counter(r["verdict"].strip() for r in j); jn = len(j)
 check("Java strict", f"{pct(jvc['Central'],jn)} ({jvc['Central']}/{jn}")
 check("Java relaxed", f"({jvc['Central']+jvc['Tangential']}/{jn}")
 
+# ── Noise filter (Table filter-precision) ─────────────────────────────
+from noise_filter import (f1_minified_identifier, f2_generic_identifier,
+                          f3_test_function, f4_function_count_cap,
+                          f5_hunk_header_only)
+
+_filters = [f1_minified_identifier, f2_generic_identifier,
+            f3_test_function, f4_function_count_cap, f5_hunk_header_only]
+
+filtered_out = set()
+for i, r in enumerate(n104):
+    if any(f(r) for f in _filters):
+        filtered_out.add(i)
+
+remaining = [r for i, r in enumerate(n104) if i not in filtered_out]
+nf = len(remaining)
+cf = sum(1 for r in remaining if r["verdict"].strip() == "Central")
+tf = sum(1 for r in remaining if r["verdict"].strip() == "Tangential")
+
+check("Filter strict",  f"72.5\\%", f"$n{{=}}80$")
+check("Filter relaxed", f"95.0\\%")
+# Per-tier after filter
+tier_f = defaultdict(Counter)
+for r in remaining:
+    tier_f[r["confidence"].strip()][r["verdict"].strip()] += 1
+for T, exp_s in [("High", "87.2"), ("Medium", "60.6"), ("Low", "50.0")]:
+    d = tier_f[T]; tn = sum(d.values())
+    check(f"Filter {T} strict", f"{exp_s}\\%")
+
+# Corpus-level filter numbers (verify the counts stated in the paper)
+check("Filter npm corpus", "3{,}276 of 8{,}769", "37.4\\%")
+check("Filter PyPI corpus", "22{,}153 of 32{,}197", "68.8\\%")
+# Noise removal rate
+check("Filter noise removal", "22 of 26 Noise", "85\\%")
+
+# ── Tree-sitter PoC ──────────────────────────────────────────────────
+ts_results_file = HERE / "treesitter_poc" / "results.json"
+if ts_results_file.exists():
+    import json as _json
+    ts_data = _json.loads(ts_results_file.read_text())
+    s = ts_data["summary"]
+    check("TS noise mismatches",
+          f"all four cases, tree-sitter correctly identified")
+    check("TS control agreements",
+          "agreed on 8", "more precise", "remaining", "6")
+    check("TS total cases", "18~cases")
+
+# ── Recall study ─────────────────────────────────────────────────────
+recall_file = HERE / "recall_study_results.json"
+if recall_file.exists():
+    import json as _json2
+    rd = _json2.loads(recall_file.read_text())
+    check("Recall n advisories", f"$n{{=}}{rd['total_advisories']}$", "114~ground-truth")
+    check("Recall at-least-one", "25 of 44", "56.8\\%")
+    check("Recall aggregate", "32 of 114", "28.1\\%")
+    check("Recall perfect", "Twelve advisories achieved 100\\% recall")
+
+# ── Held-out filter validation (Java n=20) ────────────────────────────
+held_out_file = HERE / "filter_held_out_results.json"
+if held_out_file.exists():
+    import json as _json3
+    ho = _json3.loads(held_out_file.read_text())
+    check("Held-out pre-filter strict", "55.0\\%", "52.6\\%")
+    check("Held-out Central FP",
+          "Central false positive")
+    check("Held-out ecosystem gap",
+          "exception class names")
+
 # ── report ────────────────────────────────────────────────────────────
 fails = [r for r in results if r[1] is False]
 skips = [r for r in results if r[1] is None]

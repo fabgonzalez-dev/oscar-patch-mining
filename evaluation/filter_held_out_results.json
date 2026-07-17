@@ -1,0 +1,57 @@
+{
+  "dataset": "java_precision_validation.csv",
+  "n_total": 20,
+  "pre_filter": {
+    "strict_pct": 55.0,
+    "relaxed_pct": 75.0,
+    "central": 11,
+    "tangential": 4,
+    "noise": 5
+  },
+  "post_filter": {
+    "n": 19,
+    "strict_pct": 52.6,
+    "relaxed_pct": 73.7,
+    "central": 10,
+    "tangential": 4,
+    "noise": 5
+  },
+  "removed": {
+    "total": 1,
+    "central_fp": 1,
+    "tangential_fp": 0,
+    "noise_tp": 0
+  },
+  "per_filter": {
+    "F1_minified": {
+      "total": 0,
+      "central": 0,
+      "tangential": 0,
+      "noise": 0,
+      "samples": []
+    },
+    "F2_generic": {
+      "total": 0,
+      "central": 0,
+      "tangential": 0,
+      "noise": 0,
+      "samples": []
+    },
+    "F3_test": {
+      "total": 0,
+      "central": 0,
+      "tangential": 0,
+      "noise": 0,
+      "samples": []
+    },
+    "F4_dilution": {
+      "total": 1,
+      "central": 1,
+      "tangential": 0,
+      "noise": 0,
+      "samples": [
+        "DomPoxMessageFactory"
+      ]
+    }
+  }
+}

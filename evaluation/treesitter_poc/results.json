@@ -1,0 +1,175 @@
+{
+  "noise_cases": [
+    {
+      "vuln_id": "GHSA-h75v-3vvj-5mfj",
+      "file": "src/jinja2/filters.py",
+      "line": 253,
+      "hunk_header_func": "do_items",
+      "ast_enclosing_func": null,
+      "line_content": "_space_re = re.compile(r\"\\s\", flags=re.ASCII)",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-hrf3-622q-8366",
+      "file": "nvflare/lighter/utils.py",
+      "line": 49,
+      "hunk_header_func": "sign_all",
+      "ast_enclosing_func": "load_yaml",
+      "line_content": "    return yaml.load(open(file_name, \"r\"), Loader=yaml.Loader)",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-mjqh-v5f2-g2mw",
+      "file": "airflow/utils/timezone.py",
+      "line": 197,
+      "hunk_header_func": "datetime",
+      "ast_enclosing_func": "parse",
+      "line_content": "def parse(string: str, timezone=None) -> DateTime:",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-mjqh-v5f2-g2mw",
+      "file": "airflow/utils/timezone.py",
+      "line": 206,
+      "hunk_header_func": "datetime",
+      "ast_enclosing_func": "parse",
+      "line_content": "    return pendulum.parse(string, tz=timezone or TIMEZONE, strict=False)  # type",
+      "match": false
+    }
+  ],
+  "control_cases": [
+    {
+      "vuln_id": "GHSA-vh95-rmgr-6w4m",
+      "file": "index.js",
+      "line": 178,
+      "hunk_header_func": "hasKey",
+      "ast_enclosing_func": "setKey",
+      "line_content": "    keys.slice(0,-1).forEach(function (key) {",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-vh95-rmgr-6w4m",
+      "file": "index.js",
+      "line": 181,
+      "hunk_header_func": "hasKey",
+      "ast_enclosing_func": "setKey",
+      "line_content": "    });",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-vh95-rmgr-6w4m",
+      "file": "index.js",
+      "line": 182,
+      "hunk_header_func": "hasKey",
+      "ast_enclosing_func": "setKey",
+      "line_content": "    ",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-phj8-2p6x-hq5r",
+      "file": "packages/renderer/htmlUtils.ts",
+      "line": 136,
+      "hunk_header_func": null,
+      "ast_enclosing_func": "sanitizeHtml",
+      "line_content": "\tsanitizeHtml(html: string, options: any = null) {",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-phj8-2p6x-hq5r",
+      "file": "packages/renderer/htmlUtils.ts",
+      "line": 161,
+      "hunk_header_func": null,
+      "ast_enclosing_func": "sanitizeHtml",
+      "line_content": "\t\tconst disallowedTags = ['script', 'iframe', 'frameset', 'frame', 'object', 'ba",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-pxg6-pf52-xh8x",
+      "file": "index.js",
+      "line": 119,
+      "hunk_header_func": "serialize",
+      "ast_enclosing_func": "serialize",
+      "line_content": "  if (!fieldContentRegExp.test(name)) {",
+      "match": true
+    },
+    {
+      "vuln_id": "GHSA-pxg6-pf52-xh8x",
+      "file": "index.js",
+      "line": 125,
+      "hunk_header_func": "serialize",
+      "ast_enclosing_func": "serialize",
+      "line_content": "  if (value && !fieldContentRegExp.test(value)) {",
+      "match": true
+    },
+    {
+      "vuln_id": "GHSA-pxg6-pf52-xh8x",
+      "file": "index.js",
+      "line": 142,
+      "hunk_header_func": "serialize",
+      "ast_enclosing_func": "serialize",
+      "line_content": "    if (!fieldContentRegExp.test(opt.domain)) {",
+      "match": true
+    },
+    {
+      "vuln_id": "GHSA-pxg6-pf52-xh8x",
+      "file": "index.js",
+      "line": 150,
+      "hunk_header_func": "serialize",
+      "ast_enclosing_func": "serialize",
+      "line_content": "    if (!fieldContentRegExp.test(opt.path)) {",
+      "match": true
+    },
+    {
+      "vuln_id": "GHSA-v6h2-p8h4-qcjw",
+      "file": "index.js",
+      "line": 157,
+      "hunk_header_func": "expand",
+      "ast_enclosing_func": "expand",
+      "line_content": "      if (m.post.match(/,.*\\}/)) {",
+      "match": true
+    },
+    {
+      "vuln_id": "GHSA-v6h2-p8h4-qcjw",
+      "file": "index.js",
+      "line": 147,
+      "hunk_header_func": "expand",
+      "ast_enclosing_func": "expand",
+      "line_content": "      if (m.post.match(/,.*\\}/)) {",
+      "match": true
+    },
+    {
+      "vuln_id": "GHSA-www2-v7xj-xrc6",
+      "file": "urllib3/poolmanager.py",
+      "line": 316,
+      "hunk_header_func": "urlopen",
+      "ast_enclosing_func": "PoolManager.urlopen",
+      "line_content": "            kw['headers'] = self.headers",
+      "match": true
+    },
+    {
+      "vuln_id": "GHSA-2xpw-w6gg-jr37",
+      "file": "src/urllib3/response.py",
+      "line": 461,
+      "hunk_header_func": "_init_decoder",
+      "ast_enclosing_func": "BaseHTTPResponse._decode",
+      "line_content": "        self, data: bytes, decode_content: bool | None, flush_decoder: bool",
+      "match": false
+    },
+    {
+      "vuln_id": "GHSA-38jv-5279-wg99",
+      "file": "dummyserver/app.py",
+      "line": 239,
+      "hunk_header_func": "redirect",
+      "ast_enclosing_func": "redirect",
+      "line_content": "    return await make_response(\"\", status_code, headers)",
+      "match": true
+    }
+  ],
+  "summary": {
+    "noise_analyzed": 4,
+    "noise_mismatches": 4,
+    "control_analyzed": 14,
+    "control_agreements": 8,
+    "control_disagreements": 6
+  }
+}

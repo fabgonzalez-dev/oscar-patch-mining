@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Tree-sitter PoC cached downloads (reproducible via script re-run)
+evaluation/treesitter_poc/cache/

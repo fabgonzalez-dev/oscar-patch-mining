@@ -1,0 +1,20 @@
+{
+  "total_advisories": 44,
+  "skipped": 2,
+  "total_gt_functions": 114,
+  "total_matched": 32,
+  "aggregate_recall_pct": 28.1,
+  "at_least_one": 25,
+  "at_least_one_pct": 56.8,
+  "perfect": 12,
+  "original": {
+    "n": 19,
+    "at_least_one": 11,
+    "aggregate_pct": 22.9
+  },
+  "extended": {
+    "n": 25,
+    "at_least_one": 14,
+    "aggregate_pct": 31.8
+  }
+}
