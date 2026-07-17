@@ -1,4 +1,4 @@
-# OSCAR Patch Mining — Replication Package
+# Patch Mining — Replication Package
 
 **From Fix Commits to Vulnerable Functions: Automated Patch Mining for Function-Level CVE Resolution**
 
@@ -83,10 +83,10 @@ python3 check_consistency.py
 
 ### Reproducing the Extraction
 
-The extraction pipeline is part of the OSCAR platform. To run from scratch:
+The extraction pipeline is part of a companion repository. To run from scratch:
 
 ```bash
-# Clone the OSCAR research data repo (anonymized URL for review)
+# Clone the research data repo (anonymized URL for review)
 git clone https://github.com/ANONYMIZED/ANONYMIZED.git
 
 # Run the patch mining pipeline on GHSA advisories
@@ -119,8 +119,8 @@ python evaluation/scored_evaluation.py --source project-kb
 If you use this dataset or technique, please cite:
 
 ```bibtex
-@inproceedings{gonzalez2026patchmining,
-  author    = {Gonzalez Arellano, R. Fabian and Podder, Rakesh and Ray, Indrakshi},
+@inproceedings{anon2026patchmining,
+  author    = {Anonymous},
   title     = {From Fix Commits to Vulnerable Functions: Automated Patch Mining for Function-Level {CVE} Resolution},
   booktitle = {Proc. SCORED '26},
   publisher = {ACM},

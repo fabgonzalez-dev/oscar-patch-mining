@@ -1,6 +1,6 @@
 # Source Code
 
-The patch mining extraction pipeline is part of the OSCAR platform.
+The patch mining extraction pipeline is part of a companion research data repository.
 
 ## Main Extraction Script
 

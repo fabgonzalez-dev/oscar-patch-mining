@@ -1,4 +1,4 @@
-OSCAR Project KB Cross-Validation
+Project KB Cross-Validation
 Generated: 2026-05-16T16:05:57.625207
 ==================================================
 

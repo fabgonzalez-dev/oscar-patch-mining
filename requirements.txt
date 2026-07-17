@@ -1,4 +1,4 @@
-# OSCAR Patch Mining — Python Dependencies
+# Patch Mining — Python Dependencies
 # Python 3.9+ required
 
 requests>=2.28.0
